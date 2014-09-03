@@ -20,9 +20,11 @@ Installation
 Usage
 =====
 
+```sh
 Usage: dockstrap.py [OPTIONS] IMAGE PATH
 
 Options:
   --baseurl TEXT   set the base url for registry api access
   --cachedir TEXT  set the directory on which to store/cache image files
   --help           Show this message and exit.
+  ```
