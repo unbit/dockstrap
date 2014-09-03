@@ -34,6 +34,14 @@ Options:
   --cachedir TEXT  set the directory on which to store/cache image files
   --help           Show this message and exit.
   ```
+  
+The script downloads and extract docker images in the specified directory.
+
+When downloading a new image file (that could be big) a cache directory is checked (already downloaded images will be reused).
+
+By default the cache directory is in ~/dockstrap_cache you are free to remove it (or some of the items in it) whenever you want
+
+By default the scripts connects to the https://index.docker.io url
 
 Examples
 ========
