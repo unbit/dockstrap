@@ -24,7 +24,16 @@ def get_images(baseurl, image):
             r.json())
 
 
-def download_layers(endpoint, token, image_id, cachedir):
+def get_checksum(image_id, images):
+    for image in images:
+        if image['id'] == image_id:
+            if not image['checksum']:
+                return None
+            return image['checksum']
+    return None
+
+
+def download_layers(endpoint, token, image_id, cachedir, checksums):
     layers = []
     while True:
         r = requests.get('https://{0}/v1/images/{1}/json'.format(endpoint,
@@ -48,6 +57,16 @@ def download_layers(endpoint, token, image_id, cachedir):
                          stream=True)
         destination = os.path.join(cachedir, layer)
         content_length = long(r.headers['content-length'])
+
+        # first of all check if the file exists
+        if os.path.isfile(destination):
+            # does the filesize matches ?
+            if os.path.getsize(destination) == content_length:
+                # do we need to compute the checksum ?
+                checksum = get_checksum(layer, checksums)
+                print "CHECKSUM", checksum
+                click.echo("reusing cached {0}".format(layer))
+                continue
         remains = content_length
         with open(destination, 'w') as targz:
             while remains > 0:
@@ -112,12 +131,10 @@ def dockstrap_run(baseurl, cachedir, image, path):
     end the registry endpoints too
     """
     token, endpoints, images = get_images(baseurl, image)
-    checksum = None
     image_id = None
     for image_item in images:
         if image_item['id'].startswith(layer):
             image_id = image_item['id']
-            checksum = image_item['checksum']
             break
     if not image_id:
         raise click.ClickException("unable to find image id"
@@ -126,7 +143,11 @@ def dockstrap_run(baseurl, cachedir, image, path):
     click.echo("using endpoint: {0}".format(endpoint))
     # now start iterating layers
     # and download them
-    layers = download_layers(endpoint, token, image_id, cachedir)
+    layers = download_layers(endpoint,
+                             token,
+                             image_id,
+                             cachedir,
+                             images)
     am_i_root = False
     if os.getuid() == 0:
         am_i_root = True
@@ -144,14 +165,19 @@ def dockstrap_run(baseurl, cachedir, image, path):
             if taritem.name.startswith('../'):
                 raise click.ClickException("Security error, item {0} starts"
                                            " with ../".format(taritem.name))
-            if not am_i_root and not taritem.ischr() and not taritem.isdev():
-                destination = os.path.join(path, taritem.name)
-                # ensure the user has write permissions on
-                # an already existing regular file
-                if os.path.isfile(destination) and \
-                   not os.path.islink(destination):
-                        mode = os.stat(destination).st_mode
-                        os.chmod(destination, mode | stat.S_IWUSR)
+
+            destination = os.path.join(path, taritem.name)
+            # remove devices to avoid errors
+            # on the second round
+            if am_i_root and taritem.isdev():
+                if os.path.exists(destination):
+                    os.unlink(destination)
+            # characters and block devices must be ignored
+            if not am_i_root and not taritem.ischr() \
+               and not taritem.isblk():
+                # remove already existing files/link
+                if os.path.isfile(destination):
+                    os.unlink(destination)
                 members.append(taritem)
         click.echo("extracting {0} to {1}".format(layer, path))
         if am_i_root:
