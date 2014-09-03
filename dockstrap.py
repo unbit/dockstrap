@@ -126,6 +126,3 @@ def dockstrap_run(baseurl, cachedir, image, path):
         else:
             tarball.extractall(path=path, members=members)
     click.echo("your filesystem is ready at {0}".format(path))
-
-if __name__ == '__main__':
-    dockstrap_run()
