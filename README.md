@@ -11,7 +11,7 @@ with other namespace/containing/virtualization technologies, like plain lxc, uWS
 Requirements
 ============
 
-The tool is written in python and uses teh requests and click modules
+The tool is written in python and uses teh requests (http://docs.python-requests.org/en/latest/) and click (http://click.pocoo.org/) modules
 
 Installation
 ============
