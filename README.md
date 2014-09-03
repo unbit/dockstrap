@@ -34,3 +34,15 @@ Options:
   --cachedir TEXT  set the directory on which to store/cache image files
   --help           Show this message and exit.
   ```
+
+Examples
+========
+
+```sh
+# clone ubuntu image to 'foobuntu' directory
+dockstrap ubuntu foobuntu
+# clone tag 14.0.4 of ubuntu repository into 'trusty' directory
+dockstrap ubuntu:14.04 trusty
+# clone redis into /tmp/redis using /tmp/cache as cachedir
+dockstrap --cachedir /tmp/cache redis /tmp/redis
+```
