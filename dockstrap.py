@@ -5,22 +5,31 @@ import os.path
 import tarfile
 import stat
 
+
 def setup_cachedir(path):
     if not os.path.isdir(path):
         os.mkdir(path)
+
 
 def get_tags(baseurl, image):
     r = requests.get('{0}/v1/repositories/{1}/tags'.format(baseurl, image))
     return r.json()
 
+
 def get_images(baseurl, image):
-    r = requests.get('{0}/v1/repositories/{1}/images'.format(baseurl, image), headers={'X-Docker-Token': 'true'})
-    return r.headers['x-docker-token'], r.headers['x-docker-endpoints'], r.json()
+    r = requests.get('{0}/v1/repositories/{1}/images'.format(baseurl, image),
+                     headers={'X-Docker-Token': 'true'})
+    return (r.headers['x-docker-token'],
+            r.headers['x-docker-endpoints'],
+            r.json())
+
 
 def download_layers(endpoint, token, image_id, cachedir):
     layers = []
     while True:
-        r = requests.get('https://{0}/v1/images/{1}/json'.format(endpoint, image_id), headers={'Authorization': 'Token {0}'.format(token)})
+        r = requests.get('https://{0}/v1/images/{1}/json'.format(endpoint,
+                                                                 image_id),
+                         headers={'Authorization': 'Token {0}'.format(token)})
         image_json = r.json()
         if 'parent' in image_json:
             if not image_json['parent']:
@@ -33,7 +42,10 @@ def download_layers(endpoint, token, image_id, cachedir):
     # start downloading layers
     # TODO verify checksum to avoid re-downloading
     for layer in layers:
-        r = requests.get('https://{0}/v1/images/{1}/layer'.format(endpoint, layer), headers={'Authorization': 'Token {0}'.format(token)}, stream=True)
+        r = requests.get('https://{0}/v1/images/{1}/layer'.format(endpoint,
+                                                                  layer),
+                         headers={'Authorization': 'Token {0}'.format(token)},
+                         stream=True)
         destination = os.path.join(cachedir, layer)
         content_length = long(r.headers['content-length'])
         remains = content_length
@@ -43,14 +55,22 @@ def download_layers(endpoint, token, image_id, cachedir):
                 if not chunk:
                     break
                 remains -= len(chunk)
-                click.echo("\rdownloading layer {0} {1}/{2}".format(layer, content_length - remains, content_length), nl=False)
+                downloaded = content_length - remains
+                click.echo("\rdownloading layer {0}"
+                           " {1}/{2}".format(layer,
+                                             downloaded,
+                                             content_length),
+                           nl=False)
                 targz.write(chunk)
         click.echo('')
     return layers
 
+
 @click.command()
-@click.option('--baseurl', default='https://index.docker.io', help='set the base url for registry api access')
-@click.option('--cachedir', default=os.path.expanduser('~/.dockstrap_cache'), help='set the directory on which to store/cache image files')
+@click.option('--baseurl', default='https://index.docker.io',
+              help='set the base url for registry api access')
+@click.option('--cachedir', default=os.path.expanduser('~/.dockstrap_cache'),
+              help='set the directory on which to store/cache image files')
 @click.argument('image')
 @click.argument('path')
 def dockstrap_run(baseurl, cachedir, image, path):
@@ -60,7 +80,7 @@ def dockstrap_run(baseurl, cachedir, image, path):
     tag = 'latest'
     # does the user specified a tag ?
     if ':' in image:
-        image, tag = image.split(':', 1)  
+        image, tag = image.split(':', 1)
     # get the tags list
     tags = get_tags(baseurl, image)
     # check the requested tag exists:
@@ -77,11 +97,13 @@ def dockstrap_run(baseurl, cachedir, image, path):
     click.echo("using image: {0}".format(image))
     click.echo("using tag: {0}".format(tag))
 
-    # get the list of repository images
-    # this list will be used for managing
-    # checksums
-    # the function returns the authentication token
-    # end the registry endpoints too 
+    """
+    get the list of repository images
+    this list will be used for managing
+    checksums.
+    the function returns the authentication token
+    end the registry endpoints too
+    """
     token, endpoints, images = get_images(baseurl, image)
     checksum = None
     image_id = None
@@ -91,7 +113,8 @@ def dockstrap_run(baseurl, cachedir, image, path):
             checksum = image_item['checksum']
             break
     if not image_id:
-        raise click.ClickException("unable to find image id starting with '{0}'".format(layer))
+        raise click.ClickException("unable to find image id"
+                                   " starting with '{0}'".format(layer))
     endpoint = endpoints.split(' ')[0]
     click.echo("using endpoint: {0}".format(endpoint))
     # now start iterating layers
@@ -109,16 +132,19 @@ def dockstrap_run(baseurl, cachedir, image, path):
         members = []
         for taritem in tarball:
             if taritem.name.startswith('/'):
-                raise click.ClickException("Security error, item {0} starts with /".format(taritem.name))
+                raise click.ClickException("Security error, item {0} starts"
+                                           " with /".format(taritem.name))
             if taritem.name.startswith('../'):
-                raise click.ClickException("Security error, item {0} starts with ../".format(taritem.name))
+                raise click.ClickException("Security error, item {0} starts"
+                                           " with ../".format(taritem.name))
             if not am_i_root and not taritem.ischr() and not taritem.isdev():
                 destination = os.path.join(path, taritem.name)
                 # ensure the user has write permissions on
                 # an already existing regular file
-                if os.path.isfile(destination) and not os.path.islink(destination):
-                    mode = os.stat(destination).st_mode
-                    os.chmod(destination, mode | stat.S_IWUSR)
+                if os.path.isfile(destination) and \
+                   not os.path.islink(destination):
+                        mode = os.stat(destination).st_mode
+                        os.chmod(destination, mode | stat.S_IWUSR)
                 members.append(taritem)
         click.echo("extracting {0} to {1}".format(layer, path))
         if am_i_root:
