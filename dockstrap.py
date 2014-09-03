@@ -3,7 +3,6 @@ import click
 import os
 import os.path
 import tarfile
-import stat
 
 
 def setup_cachedir(path):
@@ -48,8 +47,7 @@ def download_layers(endpoint, token, image_id, cachedir, checksums):
         else:
             break
 
-    # start downloading layers
-    # TODO verify checksum to avoid re-downloading
+    # start downloading layers (if needed)
     for layer in layers:
         r = requests.get('https://{0}/v1/images/{1}/layer'.format(endpoint,
                                                                   layer),
@@ -64,7 +62,9 @@ def download_layers(endpoint, token, image_id, cachedir, checksums):
             if os.path.getsize(destination) == content_length:
                 # do we need to compute the checksum ?
                 checksum = get_checksum(layer, checksums)
-                print "CHECKSUM", checksum
+                # TODO do something with checksum
+                if checksum:
+                    pass
                 click.echo("reusing cached {0}".format(layer))
                 continue
         remains = content_length
