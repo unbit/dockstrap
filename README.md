@@ -16,6 +16,12 @@ The tool is written in python and uses the requests (http://docs.python-requests
 Installation
 ============
 
+```sh
+pip install dockstrap
+```
+
+should be enough
+
 
 Usage
 =====
