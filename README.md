@@ -53,6 +53,8 @@ Examples
 ```sh
 # clone ubuntu image to 'foobuntu' directory
 dockstrap ubuntu foobuntu
+# chroot to it and run ls
+chroot foobuntu ls
 # clone tag 14.0.4 of ubuntu repository into 'trusty' directory
 dockstrap ubuntu:14.04 trusty
 # clone redis into /tmp/redis using /tmp/cache as cachedir
