@@ -27,7 +27,7 @@ Usage
 =====
 
 ```sh
-Usage: dockstrap.py [OPTIONS] IMAGE PATH
+Usage: dockstrap [OPTIONS] IMAGE PATH
 
 Options:
   --baseurl TEXT   set the base url for registry api access
