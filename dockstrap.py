@@ -78,8 +78,10 @@ def dockstrap_run(baseurl, cachedir, image, path):
     click.echo("using baseurl: {0}".format(baseurl))
     click.echo("using cachedir: {0}".format(cachedir))
     tag = 'latest'
+    force_tag = False
     # does the user specified a tag ?
     if ':' in image:
+        force_tag = True
         image, tag = image.split(':', 1)
     # get the tags list
     tags = get_tags(baseurl, image)
@@ -91,8 +93,13 @@ def dockstrap_run(baseurl, cachedir, image, path):
             break
     # if no tag is found, get the first one
     if not layer:
-        layer = tags[0]['layer']
-        tag = tags[0]['name']
+        if not force_tag:
+            layer = tags[0]['layer']
+            tag = tags[0]['name']
+        else:
+            raise click.ClickException("unable to find tag {0}"
+                                       " for repository {1}".format(tag,
+                                                                    image))
 
     click.echo("using image: {0}".format(image))
     click.echo("using tag: {0}".format(tag))
