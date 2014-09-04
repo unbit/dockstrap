@@ -11,7 +11,7 @@ def setup_dir(path):
 
 
 def is_gzip(path):
-    with open(path) as f:
+    with open(path, 'rb') as f:
         gzip_header = f.read(2)
         if gzip_header[0] != 0x1F:
             return False
@@ -103,6 +103,7 @@ def download_layers(endpoint, token, image_id, cachedir, checksums):
 @click.option('--cachedir', default=os.path.expanduser('~/.dockstrap_cache'),
               help='set the directory on which to store/cache image files')
 @click.option('--verbose', default=False,
+              is_flag = True,
               help='set verbose mode')
 @click.argument('image')
 @click.argument('path')
@@ -171,9 +172,9 @@ def dockstrap_run(baseurl, cachedir, image, path, verbose):
         source = os.path.join(cachedir, layer)
         flags = ['-', 'x', 'f']
         if is_gzip(source):
-            flags.append('z')
+            flags.insert(1, 'z')
         if verbose:
-            flags.append('v')
+            flags.insert(1, 'v')
         click.echo("extracting {0} to {1}".format(layer, path))
         if not am_i_root:
             ret = call(['tar',
