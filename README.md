@@ -13,6 +13,8 @@ Requirements
 
 The tool is written in python and uses the requests (http://docs.python-requests.org/en/latest/) and click (http://click.pocoo.org/) modules
 
+Python >= 2.7 is required (yes, python3 is supported)
+
 Installation
 ============
 
@@ -43,9 +45,7 @@ By default the cache directory is in ~/.dockstrap_cache you are free to remove i
 
 By default the scripts connects to the https://index.docker.io url
 
-You can run the script as root or as an unprivileged user, in this second case characters and block devices will be ignored, and already present files (in the destination directory) will be removed to avoid permissions problems during overwrite.
-
-In root mode, only device files are removed before applying a new image (read: expliding the tarball)
+You can run the script as root or as an unprivileged user, in this second case the /dev/ directory will be ignored.
 
 Examples
 ========
