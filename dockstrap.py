@@ -2,13 +2,21 @@ import requests
 import click
 import os
 import os.path
-import tarfile
+from subprocess import call
 
 
-def setup_cachedir(path):
+def setup_dir(path):
     if not os.path.isdir(path):
         os.mkdir(path)
 
+def is_gzip(path):
+    with open(path) as f:
+        gzip_header = f.read(2)
+        if gzip_header[0] != 0x1F:
+            return False
+        if gzip_header[1] != 0x8B:
+            return False
+    return True
 
 def get_tags(baseurl, image):
     r = requests.get('{0}/v1/repositories/{1}/tags'.format(baseurl, image))
@@ -54,7 +62,7 @@ def download_layers(endpoint, token, image_id, cachedir, checksums):
                          headers={'Authorization': 'Token {0}'.format(token)},
                          stream=True)
         destination = os.path.join(cachedir, layer)
-        content_length = long(r.headers['content-length'])
+        content_length = int(r.headers['content-length'])
 
         # first of all check if the file exists
         if os.path.isfile(destination):
@@ -93,7 +101,8 @@ def download_layers(endpoint, token, image_id, cachedir, checksums):
 @click.argument('image')
 @click.argument('path')
 def dockstrap_run(baseurl, cachedir, image, path):
-    setup_cachedir(cachedir)
+    setup_dir(cachedir)
+    setup_dir(path)
     click.echo("using baseurl: {0}".format(baseurl))
     click.echo("using cachedir: {0}".format(cachedir))
     tag = 'latest'
@@ -154,34 +163,10 @@ def dockstrap_run(baseurl, cachedir, image, path):
 
     for layer in layers:
         source = os.path.join(cachedir, layer)
-        tarball = tarfile.open(source)
-        # this list is filled only if
-        # i am not uid 0
-        members = []
-        for taritem in tarball:
-            if taritem.name.startswith('/'):
-                raise click.ClickException("Security error, item {0} starts"
-                                           " with /".format(taritem.name))
-            if taritem.name.startswith('../'):
-                raise click.ClickException("Security error, item {0} starts"
-                                           " with ../".format(taritem.name))
-
-            destination = os.path.join(path, taritem.name)
-            # remove devices to avoid errors
-            # on the second round
-            if am_i_root and taritem.isdev():
-                if os.path.exists(destination):
-                    os.unlink(destination)
-            # characters and block devices must be ignored
-            if not am_i_root and not taritem.ischr() \
-               and not taritem.isblk():
-                # remove already existing files/link
-                if os.path.isfile(destination):
-                    os.unlink(destination)
-                members.append(taritem)
+        flags = ['-', 'x', 'f']
+        if is_gzip(source):
+            flags.append('z')
         click.echo("extracting {0} to {1}".format(layer, path))
-        if am_i_root:
-            tarball.extractall(path=path)
-        else:
-            tarball.extractall(path=path, members=members)
+        if call(['tar', '-C', path, ''.join(flags), source]) != 0:
+            raise click.ClickException("tar failed")
     click.echo("your filesystem is ready at {0}".format(path))
