@@ -9,6 +9,7 @@ def setup_dir(path):
     if not os.path.isdir(path):
         os.mkdir(path)
 
+
 def is_gzip(path):
     with open(path) as f:
         gzip_header = f.read(2)
@@ -18,8 +19,11 @@ def is_gzip(path):
             return False
     return True
 
+
 def get_tags(baseurl, image):
     r = requests.get('{0}/v1/repositories/{1}/tags'.format(baseurl, image))
+    if r.status_code != 200:
+        raise click.ClickException("repository {0} not found".format(image))
     return r.json()
 
 
@@ -98,9 +102,11 @@ def download_layers(endpoint, token, image_id, cachedir, checksums):
               help='set the base url for registry api access')
 @click.option('--cachedir', default=os.path.expanduser('~/.dockstrap_cache'),
               help='set the directory on which to store/cache image files')
+@click.option('--verbose', default=False,
+              help='set verbose mode')
 @click.argument('image')
 @click.argument('path')
-def dockstrap_run(baseurl, cachedir, image, path):
+def dockstrap_run(baseurl, cachedir, image, path, verbose):
     setup_dir(cachedir)
     setup_dir(path)
     click.echo("using baseurl: {0}".format(baseurl))
@@ -166,7 +172,14 @@ def dockstrap_run(baseurl, cachedir, image, path):
         flags = ['-', 'x', 'f']
         if is_gzip(source):
             flags.append('z')
+        if verbose:
+            flags.append('v')
         click.echo("extracting {0} to {1}".format(layer, path))
-        if call(['tar', '-C', path, ''.join(flags), source]) != 0:
+        if not am_i_root:
+            ret = call(['tar',
+                        '--exclude=dev', '-C', path, ''.join(flags), source])
+        else:
+            ret = call(['tar', '-C', path, ''.join(flags), source])
+        if ret != 0:
             raise click.ClickException("tar failed")
     click.echo("your filesystem is ready at {0}".format(path))
