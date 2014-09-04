@@ -34,6 +34,7 @@ Usage: dockstrap [OPTIONS] IMAGE PATH
 Options:
   --baseurl TEXT   set the base url for registry api access
   --cachedir TEXT  set the directory on which to store/cache image files
+  --verbose        set verbose mode
   --help           Show this message and exit.
   ```
   
